@@ -10,6 +10,7 @@ services:
     runtime: docker
     rootDir: backend
     dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     plan: free
     envVars:
       - key: DATABASE_URL
@@ -33,6 +34,7 @@ services:
     runtime: docker
     rootDir: frontend
     dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
     plan: free
     envVars:
       - key: NEXT_PUBLIC_API_URL
