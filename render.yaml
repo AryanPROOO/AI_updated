@@ -37,5 +37,6 @@ services:
         value: "https://ai-research-backend.onrender.com"
       - key: API_URL_INTERNAL
         value: "http://ai-research-backend:8000"
-    buildCommand: ""
-    startCommand: ""
+    envVarsForBuild:
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
