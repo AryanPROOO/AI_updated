@@ -1,0 +1,41 @@
+databases:
+  - name: ai-research-db
+    plan: free
+    databaseName: research_agent
+    user: research
+
+services:
+  - type: web
+    name: ai-research-backend
+    runtime: docker
+    rootDir: backend
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ai-research-db
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: FETCH_INTERVAL_HOURS
+        value: "6"
+      - key: ARXIV_CATEGORIES
+        value: cs.AI,cs.CL,cs.LG,cs.RO,cs.CV
+    healthCheckPath: /docs
+
+  - type: web
+    name: ai-research-frontend
+    runtime: docker
+    rootDir: frontend
+    plan: free
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: "https://ai-research-backend.onrender.com"
+      - key: API_URL_INTERNAL
+        value: "http://ai-research-backend:8000"
+    buildCommand: ""
+    startCommand: ""
