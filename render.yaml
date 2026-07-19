@@ -9,6 +9,7 @@ services:
     name: ai-research-backend
     runtime: docker
     rootDir: backend
+    dockerfilePath: ./backend/Dockerfile
     plan: free
     envVars:
       - key: DATABASE_URL
@@ -31,12 +32,12 @@ services:
     name: ai-research-frontend
     runtime: docker
     rootDir: frontend
+    dockerfilePath: ./frontend/Dockerfile
     plan: free
     envVars:
       - key: NEXT_PUBLIC_API_URL
         value: "https://ai-research-backend.onrender.com"
       - key: API_URL_INTERNAL
         value: "http://ai-research-backend:8000"
-    envVarsForBuild:
       - key: NEXT_TELEMETRY_DISABLED
         value: "1"
