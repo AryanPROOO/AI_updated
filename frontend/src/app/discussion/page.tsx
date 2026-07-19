@@ -1,22 +1,22 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import DiscussionDashboard from "@/components/DiscussionDashboard";
+import { fetchDiscussions, fetchDiscussionStatus } from "@/lib/api";
 
-const API_URL = process.env.API_URL_INTERNAL || "http://localhost:8000";
+export default function DiscussionPage() {
+  const [initialItems, setInitialItems] = useState<any[]>([]);
+  const [initialStatus, setInitialStatus] = useState<{ last_run_at: string | null }>({ last_run_at: null });
 
-export default async function DiscussionPage() {
-  let initialItems: any[] = [];
-  let initialStatus: { last_run_at: string | null } = { last_run_at: null };
-
-  try {
-    const [discussionsRes, statusRes] = await Promise.all([
-      fetch(`${API_URL}/api/discussions?limit=20`, { next: { revalidate: 300 } }),
-      fetch(`${API_URL}/api/discussions/status`, { next: { revalidate: 300 } }),
-    ]);
-
-    if (discussionsRes.ok) initialItems = await discussionsRes.json();
-    if (statusRes.ok) initialStatus = await statusRes.json();
-  } catch {
-    // Backend may not be up during first load.
-  }
+  useEffect(() => {
+    Promise.all([
+      fetchDiscussions().catch(() => []),
+      fetchDiscussionStatus().catch(() => ({ last_run_at: null })),
+    ]).then(([items, status]) => {
+      setInitialItems(items);
+      setInitialStatus(status);
+    });
+  }, []);
 
   return (
     <DiscussionDashboard initialItems={initialItems} initialStatus={initialStatus} />
