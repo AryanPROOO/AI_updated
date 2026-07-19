@@ -8,10 +8,9 @@ services:
   - type: web
     name: ai-research-backend
     runtime: docker
-    rootDir: backend
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
     plan: free
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -32,10 +31,9 @@ services:
   - type: web
     name: ai-research-frontend
     runtime: docker
-    rootDir: frontend
-    dockerfilePath: ./frontend/Dockerfile
-    dockerContext: ./frontend
     plan: free
+    dockerfilePath: frontend/Dockerfile
+    dockerContext: frontend
     envVars:
       - key: NEXT_PUBLIC_API_URL
         value: "https://ai-research-backend.onrender.com"
