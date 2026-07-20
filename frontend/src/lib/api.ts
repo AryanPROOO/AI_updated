@@ -1,6 +1,6 @@
 import { DiscussionItem, PipelineStatus, ResearchItem, Stats } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://ai-research-backend-liv2.onrender.com";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
