@@ -40,6 +40,11 @@ app.include_router(router, prefix="/api")
 app.include_router(discussion_router, prefix="/api")
 
 
+@app.get("/")
+def root():
+    return {"status": "ok", "message": "AI Research Agent API"}
+
+
 def _scheduled_fetch():
     db = SessionLocal()
     try:
