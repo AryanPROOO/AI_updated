@@ -16,4 +16,4 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 EXPOSE 3000
-CMD ["sh", "-c", "node node_modules/.next/bin/next start -p ${PORT:-3000}"]
+CMD ["npx", "next", "start"]
