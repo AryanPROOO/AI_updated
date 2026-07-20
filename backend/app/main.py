@@ -1,5 +1,6 @@
 import logging
 import threading
+import time
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
@@ -16,7 +17,16 @@ from app.pipeline.runner import run_pipeline
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-Base.metadata.create_all(bind=engine)
+for attempt in range(5):
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database connected successfully.")
+        break
+    except Exception:
+        logger.warning("Database connection attempt %d failed, retrying in 3s...", attempt + 1)
+        time.sleep(3)
+else:
+    logger.error("Could not connect to database after 5 attempts.")
 
 app = FastAPI(title="AI Research Agent", version="0.1.0")
 app.add_middleware(
