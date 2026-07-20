@@ -1,4 +1,5 @@
 import logging
+import threading
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
@@ -33,6 +34,8 @@ def _scheduled_fetch():
     db = SessionLocal()
     try:
         run_pipeline(db)
+    except Exception:
+        logger.exception("Scheduled fetch pipeline failed")
     finally:
         db.close()
 
@@ -41,25 +44,38 @@ def _scheduled_discussion_fetch():
     db = SessionLocal()
     try:
         run_discussion_pipeline(db)
+    except Exception:
+        logger.exception("Scheduled discussion pipeline failed")
     finally:
         db.close()
+
+
+def _initial_fetch():
+    """Run initial pipeline in background so it doesn't block startup."""
+    try:
+        db = SessionLocal()
+        try:
+            if db.query(ResearchItem).count() == 0:
+                logger.info("Empty database detected - running initial fetch in background.")
+                run_pipeline(db)
+            else:
+                logger.info("Database already has items, skipping initial fetch.")
+        finally:
+            db.close()
+    except Exception:
+        logger.exception("Initial fetch failed")
 
 
 scheduler = BackgroundScheduler()
-# Run every 6 hours to fetch fresh data
 scheduler.add_job(_scheduled_fetch, "interval", hours=6, id="fetch_pipeline")
 scheduler.add_job(_scheduled_discussion_fetch, "interval", hours=6, id="discussion_pipeline")
-scheduler.start()
+
 
 @app.on_event("startup")
-def startup_pipeline():
-    db = SessionLocal()
-    try:
-        if db.query(ResearchItem).count() == 0:
-            logger.info("Empty database detected - running initial fetch.")
-            run_pipeline(db)
-    finally:
-        db.close()
+def startup_scheduler():
+    scheduler.start()
+    # Run initial fetch in a background thread so startup completes fast
+    threading.Thread(target=_initial_fetch, daemon=True).start()
 
 
 @app.on_event("shutdown")
