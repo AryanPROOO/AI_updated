@@ -36,7 +36,7 @@ services:
     dockerContext: frontend
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        value: "https://ai-research-backend.onrender.com"
+        value: "https://ai-research-backend-liv2.onrender.com"
       - key: API_URL_INTERNAL
         value: "http://ai-research-backend:8000"
       - key: NEXT_TELEMETRY_DISABLED
