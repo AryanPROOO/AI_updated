@@ -139,7 +139,10 @@ class ChatRequest(BaseModel):
 
 @router.post("/chat")
 def chat_with_research(body: ChatRequest, db: Session = Depends(get_db)):
-    """Search through research and discussions to answer user questions."""
+    """Search research and discussions, then use LLM to answer."""
+    from app.config import settings
+    from openai import OpenAI
+
     question = body.question.lower()
     keywords = [w for w in question.split() if len(w) > 2]
 
@@ -163,7 +166,6 @@ def chat_with_research(body: ChatRequest, db: Session = Depends(get_db)):
                 "source": item.source,
             })
 
-    # Search discussion items
     from app.models import DiscussionItem
     discussion_results = []
     for item in db.query(DiscussionItem).all():
@@ -182,35 +184,76 @@ def chat_with_research(body: ChatRequest, db: Session = Depends(get_db)):
                 "source": item.source,
             })
 
-    # Sort by relevance
     research_results.sort(key=lambda x: x["score"], reverse=True)
     discussion_results.sort(key=lambda x: x["score"], reverse=True)
 
     top_research = research_results[:5]
     top_discussions = discussion_results[:3]
 
-    # Build response
     if not top_research and not top_discussions:
         return {
-            "answer": f"I couldn't find specific papers about '{body.question}' in the current database. Try clicking 'Fetch Updates' to load the latest research, or rephrase your question.",
+            "answer": f"I couldn't find papers about '{body.question}' in the database. Try clicking 'Fetch Updates' to load the latest research first.",
             "research": [],
             "discussions": [],
         }
 
-    # Build a natural answer
-    answer_parts = []
-    if top_research:
-        answer_parts.append(f"I found {len(top_research)} relevant research papers:")
-        for i, r in enumerate(top_research[:3], 1):
-            answer_parts.append(f"{i}. **{r['title']}** - {r['summary'][:100]}")
+    # If we have OpenAI key, generate a real explanation
+    if settings.openai_api_key:
+        try:
+            context_parts = []
+            for r in top_research[:3]:
+                context_parts.append(
+                    f"Title: {r['title']}\nSummary: {r['summary']}\nWhy it matters: {r['why']}"
+                )
+            context = "\n---\n".join(context_parts)
 
-    if top_discussions:
-        answer_parts.append(f"\nAnd {len(top_discussions)} related discussions:")
-        for i, d in enumerate(top_discussions[:2], 1):
-            answer_parts.append(f"{i}. **{d['title']}**")
+            client = OpenAI(api_key=settings.openai_api_key)
+            response = client.chat.completions.create(
+                model=settings.openai_model or "gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a friendly AI research assistant. Explain research papers "
+                            "in simple, beginner-friendly language. Avoid jargon. "
+                            "Use short paragraphs and bullet points. Be conversational."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"The user asked: \"{body.question}\"\n\n"
+                            f"Here are the most relevant papers from our database:\n{context}\n\n"
+                            f"Explain these papers to the user in simple terms. "
+                            f"Cover: what the paper does, why it matters, and key results. "
+                            f"Keep it under 300 words."
+                        ),
+                    },
+                ],
+                temperature=0.5,
+                max_tokens=500,
+            )
+            answer = response.choices[0].message.content or ""
+        except Exception:
+            answer = _build_simple_answer(top_research, top_discussions)
+    else:
+        answer = _build_simple_answer(top_research, top_discussions)
 
     return {
-        "answer": "\n".join(answer_parts),
+        "answer": answer,
         "research": top_research,
         "discussions": top_discussions,
     }
+
+
+def _build_simple_answer(research, discussions):
+    parts = []
+    if research:
+        parts.append(f"I found {len(research)} relevant papers:")
+        for i, r in enumerate(research[:3], 1):
+            parts.append(f"{i}. **{r['title']}** — {r.get('why', r.get('summary', ''))[:120]}")
+    if discussions:
+        parts.append(f"\nAnd {len(discussions)} related discussions:")
+        for i, d in enumerate(discussions[:2], 1):
+            parts.append(f"{i}. **{d['title']}**")
+    return "\n".join(parts)
